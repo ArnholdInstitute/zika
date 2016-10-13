@@ -5,6 +5,7 @@ import glob
 import pdb
 import subprocess
 import os
+import sys
 
 guide = pandas.read_csv('../CO_Data_Guide.csv')
 stream = open('script.txt', 'w')
@@ -22,16 +23,18 @@ tableName = 'temp'
 createTableCmd = subprocess.check_output(['csvsql', 'all.csv', '--table', tableName])
 stream.write('DROP TABLE IF EXISTS %s;\n' % tableName)
 stream.write(createTableCmd)
-stream.write('COPY %s FROM \'%s\' CSV HEADER;\n' % (tableName, os.getcwd() + '/all.csv'))
-
-
+stream.write('COPY %s (%s) FROM stdin WITH NULL AS \'nan\';\n' % (tableName, ','.join(data.columns)))
+data.apply(lambda row: stream.write('\t'.join(map(str, row)) + '\n' ), axis=1)
+stream.write('\\.\n')
 
 # Data Guide
 tableName = 'zika_guide'
 createTableCmd = subprocess.check_output(['csvsql', '../CO_Data_Guide.csv', '--table', tableName])
 stream.write('DROP TABLE IF EXISTS %s;\n' % tableName)
 stream.write(createTableCmd)
-stream.write('COPY %s FROM \'%s\' CSV HEADER;\n' % (tableName, os.getcwd() + '/../CO_Data_Guide.csv'))
+stream.write('COPY %s (%s) FROM stdin WITH NULL AS \'nan\';\n' % (tableName, ','.join(guide.columns)))
+guide.apply(lambda row: stream.write('\t'.join(map(str, row)) + '\n' ), axis=1)
+stream.write('\\.\n')
 
 
 tableName = 'zika'
@@ -51,3 +54,5 @@ for i in range(guide.shape[0]):
 	stream.write('UPDATE zika SET %s=temp.value FROM temp WHERE zika.report_date=temp.report_date AND zika.municipality=temp.municipality;\n' % (field))
 
 
+stream.write('DROP TABLE zika_guide;\n')
+stream.write('DROP TABLE temp;\n')
