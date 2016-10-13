@@ -50,8 +50,9 @@ stream.write('INSERT INTO zika (SELECT report_date, country, department, municip
 
 for i in range(guide.shape[0]):
 	field = guide['data_field'][i]
+	fieldCode = guide['data_field_code'][i]
 	stream.write('ALTER TABLE zika ADD COLUMN %s int;\n' % field)
-	stream.write('UPDATE zika SET %s=temp.value FROM temp WHERE zika.report_date=temp.report_date AND zika.municipality=temp.municipality;\n' % (field))
+	stream.write('UPDATE zika SET %s=temp.value FROM temp WHERE zika.report_date=temp.report_date AND zika.municipality=temp.municipality AND temp.data_field_code=\'%s\';\n' % (field, fieldCode))
 
 
 stream.write('DROP TABLE zika_guide;\n')

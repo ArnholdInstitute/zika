@@ -7,6 +7,7 @@ import pdb
 from fuzzywuzzy import fuzz
 import numpy
 import subprocess
+import pandas
 import os
 
 # Get names from GeoJSON file
@@ -53,11 +54,16 @@ for i in range(mat.shape[1]):
 
 stream.flush()
 
+matches = pandas.read_csv('./matches.txt')
+
 scriptStream = open('script.txt', 'w')
 tableName = 'names'
 scriptStream.write('DROP TABLE IF EXISTS %s;\n' % tableName)
 scriptStream.write(subprocess.check_output(['csvsql', os.getcwd() + '/matches.txt', '--tables', tableName]))
-scriptStream.write('COPY %s FROM \'%s\' CSV HEADER;\n' % (tableName, os.getcwd() + '/matches.txt'))
+scriptStream.write('COPY %s (%s) FROM stdin WITH NULL AS \'nan\';\n' % (tableName, ','.join(matches.columns)))
+matches.apply(lambda row: scriptStream.write('\t'.join(map(str, row)) + '\n' ), axis=1)
+scriptStream.write('\\.\n')
+
 scriptStream.write('UPDATE columbian_municipalities as c SET municipality=names.csv FROM names WHERE names.geom=c.municipality;\n')
 
 scriptStream.write('DROP TABLE names;\n')
